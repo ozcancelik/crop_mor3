@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crop Mor3 — 1:1 crop, 1x3 anamorphic &amp; 3x3 HFR RAW for the 5D Mark III</title>
+<meta name="description" content="Unofficial Magic Lantern modules for the Canon EOS 5D Mark III: 1:1 crop (up to 3.5K), 1x3 anamorphic (up to 5.7K and 5.4K 2040p) and 3x3 HFR RAW modes with WYSIWYG LiveView, mlv_lite recording and an enhanced mlv_play. Includes an interactive sensor mode simulator.">
+<!-- GitHub repository URL. Links marked data-repo / data-asset are built from it. -->
+<meta name="repo" content="https://github.com/ozcancelik/crop_mor3">
+<meta name="release-tag" content="v0.3.1">
+<meta name="theme-color" content="#0f0e0d">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/img/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="canonical" href="https://ozcancelik.github.io/crop_mor3/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Crop Mor3">
+<meta property="og:title" content="Crop Mor3 · 5.7K anamorphic RAW on the 5D Mark III">
+<meta property="og:description" content="13 presets, three families: 1:1 crop up to 3.5K, 1x3 up to 5.7K, 3x3 up to 60p. What you see on the LCD is what you record. Try the interactive simulator.">
+<meta property="og:url" content="https://ozcancelik.github.io/crop_mor3/">
+<meta property="og:image" content="https://ozcancelik.github.io/crop_mor3/assets/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Canon 5D Mark III showing 5.7K 1x3 LiveView with the Magic Lantern bars, next to the crop_mor3 logo">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Crop Mor3 · 5.7K anamorphic RAW on the 5D Mark III">
+<meta name="twitter:description" content="1:1 crop up to 3.5K, 1x3 up to 5.7K, 3x3 up to 60p. WYSIWYG LiveView. Interactive simulator.">
+<meta name="twitter:image" content="https://ozcancelik.github.io/crop_mor3/assets/img/og.jpg">
+<link rel="stylesheet" href="assets/css/style.css?v=20261125o">
+<script src="assets/js/sim.js?v=20261125o" defer></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#top"><img src="assets/img/crop_mor3_logo.png" width="1377" height="336" alt="Crop Mor3"></a>
+    <nav aria-label="Sections">
+      <a href="#sim">Simulator</a>
+      <a href="#modes">Modes</a>
+      <a href="#mlv-play">mlv_play</a>
+      <a href="#install">Install</a>
+      <a href="#download">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero hero-solo wrap">
+  <div class="hero-text">
+  <p class="eyebrow">Magic Lantern modules · Canon 5D Mark III</p>
+  <h1>5.7K anamorphic RAW on the 5D Mark III. WYSIWYG.</h1>
+  <p class="lede"><b>Crop Mor3</b> is Crop Mood for the 5D Mark III, by Özcan Çelik: a port of Bilal Fakhouri's <code>crop_rec</code> for the EOS M. 13 presets, three families: <code>1:1 crop</code> up to 3.5K, <code>1x3</code> up to 5.7K, <code>3x3</code> up to 60p. What you see on the LCD is what you record.</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="#sim">Try the simulator</a>
+    <a class="btn" data-repo="/releases/latest" href="#download">Download <span data-tag>v0.3.1</span></a>
+  </div>
+  <ul class="facts" aria-label="Compatibility">
+    <li><b>5D Mark III</b> firmware 1.1.3 &amp; 1.2.3</li>
+    <li><b>EOS-M</b> 2.0.2 (<code>mlv_play</code> only)</li>
+    <li>Modules only · no firmware changes</li>
+  </ul>
+  </div>
+</section>
+
+<!-- ============ SIMULATOR ============ -->
+<section id="sim" class="sim">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Sensor mode simulator</h2>
+      <p>A virtual 5D3 with the real ML menu. Press the buttons like on the camera, or use the Settings tab. The scene is a full 5760×3840 5D3 photo.</p>
+      <p class="keys">Keys: <kbd>M</kbd> ML menu · <kbd>Enter</kbd> SET · <kbd>Q</kbd> · arrows (menu, or pan 1:1) · <kbd>R</kbd> record · <kbd>I</kbd> info</p>
+    </div>
+
+    <div class="sim-grid">
+      <div class="stage-col">
+        <div class="stage" id="stage" tabindex="0" aria-label="Interactive 5D Mark III. Keys: M menu, Enter SET, Q, arrow keys, R record, I info.">
+          <img class="cam-photo" src="assets/img/5d3-back.webp" width="932" height="716" alt="Back of a Canon EOS 5D Mark III">
+          <div class="hotspots" id="hotspots">
+            <button type="button" class="hs" data-act="menu"  style="--x:103;--y:243;--r:24"  aria-label="MENU"></button>
+            <button type="button" class="hs" data-act="info"  style="--x:170;--y:240;--r:24"  aria-label="INFO"></button>
+            <button type="button" class="hs" data-act="rate"  style="--x:88;--y:397;--r:23"  aria-label="RATE"></button>
+            <button type="button" class="hs" data-act="zoom"  style="--x:88;--y:467;--r:23"  aria-label="Magnify"></button>
+            <button type="button" class="hs" data-act="play"  style="--x:88;--y:537;--r:23"  aria-label="Playback"></button>
+            <button type="button" class="hs" data-act="erase" style="--x:88;--y:607;--r:23" aria-label="Erase"></button>
+            <button type="button" class="hs" data-act="rec"   style="--x:602;--y:242;--r:24" aria-label="START/STOP (record)"></button>
+            <button type="button" class="hs" data-act="joy"   style="--x:647;--y:345;--r:26" aria-label="Multi-controller"></button>
+            <button type="button" class="hs" data-act="q"     style="--x:622;--y:425;--r:17" aria-label="Q"></button>
+            <button type="button" class="hs" data-act="up"    style="--x:697;--y:474;--r:22" aria-label="Dial up"></button>
+            <button type="button" class="hs" data-act="left"  style="--x:634;--y:537;--r:22" aria-label="Dial left"></button>
+            <button type="button" class="hs" data-act="right" style="--x:760;--y:537;--r:22" aria-label="Dial right"></button>
+            <button type="button" class="hs" data-act="down"  style="--x:697;--y:600;--r:22" aria-label="Dial down"></button>
+            <button type="button" class="hs" data-act="set"   style="--x:699;--y:537;--r:29" aria-label="SET"></button>
+            <span class="lamp" id="lamp" style="--x:735;--y:662;--r:10" aria-hidden="true"></span>
+          </div>
+
+          <div class="lcd-box">
+            <canvas id="lcd" width="720" height="480" aria-label="Camera LCD"></canvas>
+            <div class="lcd-glass" aria-hidden="true"></div>
+            <div class="toast" id="toast" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+        <p class="clip" id="clip" aria-live="polite"></p>
+        <div class="panel-block">
+          <h3>On the camera</h3>
+          <ol class="steps" id="steps"></ol>
+          <button class="link-btn" id="reset-steps" type="button">Reset walkthrough</button>
+        </div>
+
+      </div>
+
+      <div class="rec-col" aria-label="What you are recording">
+        <div class="rec-card">
+          <div class="rec-tabs" role="tablist" aria-label="Simulator details">
+            <button type="button" role="tab" id="tab-rec" aria-controls="panel-rec" aria-selected="true">Recording</button>
+            <button type="button" role="tab" id="tab-set" aria-controls="panel-set" aria-selected="false" tabindex="-1">Settings</button>
+            <button type="button" role="tab" id="tab-how" aria-controls="panel-how" aria-selected="false" tabindex="-1">How it works</button>
+          </div>
+          <div class="tab-panels">
+            <div class="tab-panel" id="panel-rec" role="tabpanel" aria-labelledby="tab-rec">
+              <div class="rec-head">
+                <h3>What you're recording</h3>
+                <div class="seg seg-mini" role="group" aria-label="Show final image or recorded frame" id="seg-recview"></div>
+              </div>
+              <canvas id="cv-rec" width="640" height="360" aria-label="Recorded frame from the sample photo"></canvas>
+              <div class="rec-tags" id="rec-tags"></div>
+              <p class="rec-note" id="rec-note"></p>
+            </div>
+            <div class="tab-panel" id="panel-set" role="tabpanel" aria-labelledby="tab-set" aria-hidden="true">
+              <div class="direct">
+              <div class="field">
+                <span class="field-label" id="lbl-family">Crop Mor3</span>
+                <div class="seg seg-wrap" role="group" aria-labelledby="lbl-family" id="seg-family"></div>
+              </div>
+              <div class="field" id="field-preset">
+                <span class="field-label" id="lbl-preset">Preset</span>
+                <div class="seg seg-wrap" role="group" aria-labelledby="lbl-preset" id="seg-preset"></div>
+              </div>
+              <div class="field">
+                <span class="field-label" id="lbl-fps">Canon movie FPS</span>
+                <div class="seg" role="group" aria-labelledby="lbl-fps" id="seg-fps"></div>
+                <label class="check" id="field-override"><input type="checkbox" id="chk-override"> ML FPS override → 23.976</label>
+              </div>
+              <div class="field">
+                <span class="field-label" id="lbl-bits">mlv_lite format</span>
+                <div class="seg" role="group" aria-labelledby="lbl-bits" id="seg-bits"></div>
+                <div class="seg" role="group" aria-label="Compression" id="seg-comp"></div>
+              </div>
+              <div class="field">
+                <label class="check"><input type="checkbox" id="chk-compare"> Show every mode on the sensor map</label>
+                <div class="photo-row">
+                  <label class="btn btn-small" for="photo">Use your own photo</label>
+                  <input type="file" id="photo" accept="image/*" hidden>
+                  <button class="link-btn" id="photo-reset" type="button" hidden>Back to sample photo</button>
+                </div>
+                <p class="fine photo-note">Best with a full-size 5D3 JPEG (5760×3840). Other photos are cropped to 3:2, so 1:1 detail is approximate. Stays in your browser.</p>
+              </div>
+              </div>
+            </div>
+            <div class="tab-panel" id="panel-how" role="tabpanel" aria-labelledby="tab-how" aria-hidden="true">
+              <p class="eyebrow" id="cap-kicker">What the sensor is doing</p>
+              <h3 id="cap-title"></h3>
+              <p id="cap-body" class="cap-body"></p>
+              <div class="how-grid">
+                <figure class="how-pixels">
+                  <div id="pixels" class="pixels"></div>
+                  <figcaption class="fig-note" id="note-pixels"></figcaption>
+                </figure>
+                <div class="how-notes">
+                  <h4>Good for</h4>
+                  <p id="cap-good"></p>
+                  <h4>Keep in mind</h4>
+                  <p id="cap-watch"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="rec-card rec-split">
+          <figure class="mini-map">
+            <canvas id="cv-mini" width="600" height="400" aria-label="Sensor area used by this mode"></canvas>
+            <figcaption>Sensor area read</figcaption>
+          </figure>
+          <div>
+            <dl class="stats" id="stats"></dl>
+            <p class="fine">Lossless sizes are estimates.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+          </div>
+        </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ MODES TABLE ============ -->
+<section id="modes" class="wrap section">
+  <div class="section-head">
+    <h2>All modes</h2>
+    <p>Sensor 5760×3840. 1:1 crop runs in x5, 3x3 in Canon 720p 50/60. 1x3 height follows Canon FPS.</p>
+  </div>
+  <div class="table-scroll">
+    <table class="modes">
+      <thead>
+        <tr><th>Family</th><th>Preset</th><th>Raw frame</th><th>Final image</th><th>H FOV</th><th>V FOV</th><th>LiveView</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1:1 crop</td><td>1280p (3:2)</td><td>1920 × 1280</td><td>1920 × 1280</td><td>33%</td><td>33%</td><td>WYSIWYG (x5, pan)</td></tr>
+        <tr><td>1:1 crop</td><td>1080p (16:9)</td><td>1920 × 1080</td><td>1920 × 1080</td><td>33%</td><td>28%</td><td>WYSIWYG (x5, pan)</td></tr>
+        <tr><td>1:1 crop</td><td>816p (2.35:1)</td><td>1920 × 816</td><td>1920 × 816</td><td>33%</td><td>21%</td><td>WYSIWYG (x5, pan)</td></tr>
+        <tr><td>1:1 crop</td><td>2.3K (16:9)</td><td>2336 × 1312</td><td>2336 × 1312</td><td>41%</td><td>34%</td><td>Centered 1920 px (x5)</td></tr>
+        <tr><td>1:1 crop</td><td>3.1K (2.35:1)</td><td>3104 × 1320</td><td>3104 × 1320</td><td>54%</td><td>34%</td><td>Centered 1920 px (x5)</td></tr>
+        <tr><td>1:1 crop</td><td>3.5K (2.71:1)</td><td>3584 × 1320</td><td>3584 × 1320</td><td>62%</td><td>34%</td><td>Centered 1920 px (x5)</td></tr>
+        <tr class="group"><td>1x3</td><td>3.4K (16:9)</td><td>1136 × 1920 <small>24p</small><br>1024 × 1728 <small>25p</small><br>912 × 1536 <small>30p</small></td><td>3408 × 1920<br>3072 × 1728<br>2736 × 1536</td><td>59%<br>53%<br>48%</td><td>50%<br>45%<br>40%</td><td>WYSIWYG</td></tr>
+        <tr><td>1x3</td><td>4.5K (2.35:1)</td><td>1504 × 1920 <small>24p</small><br>1360 × 1728 <small>25p</small><br>1200 × 1536 <small>30p</small></td><td>4512 × 1920<br>4080 × 1728<br>3600 × 1536</td><td>78%<br>71%<br>63%</td><td>50%<br>45%<br>40%</td><td>WYSIWYG</td></tr>
+        <tr><td>1x3</td><td>5.4K (2040p)</td><td>1808 × 2040 <small>24p only</small></td><td>5424 × 2040</td><td>94%</td><td>53%</td><td>WYSIWYG</td></tr>
+        <tr><td>1x3</td><td>5.7K (3:1 Max)</td><td>1920 × 1920 <small>24p</small><br>1920 × 1728 <small>25p</small><br>1920 × 1536 <small>30p</small></td><td>5760 × 1920<br>5760 × 1728<br>5760 × 1536</td><td>100%</td><td>50%<br>45%<br>40%</td><td>WYSIWYG</td></tr>
+        <tr class="group"><td>3x3</td><td>50/60p (HFR)</td><td>1920 × 800 <small>60p</small><br>1920 × 960 <small>50p</small></td><td>1920 × 800<br>1920 × 960</td><td>100%</td><td>63%<br>75%</td><td>WYSIWYG (720p mode)</td></tr>
+        <tr><td>3x3</td><td>45/48p Tall</td><td>1920 × 1040 <small>48p</small><br>1920 × 1080 <small>45p</small></td><td>1920 × 1040<br>1920 × 1080</td><td>100%</td><td>81%<br>84%</td><td>WYSIWYG (720p mode)</td></tr>
+        <tr><td>3x3</td><td>2.40:1 Scope</td><td>1920 × 800 <small>50/60p</small></td><td>1920 × 800</td><td>100%</td><td>63%</td><td>WYSIWYG (720p mode)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <b>Frame rate in the 1:1 crop modes:</b> Canon's x5 LiveView always runs at 29.776 fps, whatever the Canon menu says (24p, 25p or 30p). To shoot 23.976 fps in <code>1:1 crop</code>, turn on Magic Lantern's <em>Movie → FPS override</em> and set it to 23.976. The <code>1x3</code> modes follow Canon's selected frame rate on their own, and <code>3x3</code> modes run when Canon's video mode is set to 720p 50/60fps.
+  </div>
+</section>
+
+<!-- ============ MLV_PLAY ============ -->
+<section id="mlv-play" class="wrap section">
+  <div class="section-head">
+    <h2>mlv_play: review on the camera</h2>
+    <p>A rewritten MLV player for the 5D3, and a drop-in for Crop-Mood EOS-M. Gallery, real-time proxies with sound, LUTs, every bit depth.</p>
+  </div>
+
+  <div class="mp-groups">
+    <div class="card">
+      <h3>Browse</h3>
+      <ul>
+        <li>3×2 gallery with mode badges (<code>5.7K</code>, <code>1080p</code>…) and an SD/CF tag.</li>
+        <li>Thumbnails saved as <code>.THM</code>: instant on the next visit.</li>
+        <li><b>INFO</b>: clip details. Size, date, raw → desqueezed size, bit depth, LJ92, black level, fps, frames, length, MB/s, ISO, shutter, WB, lens, audio.</li>
+        <li>Safe delete: always starts on <b>Cancel</b>. No ERASE key? <b>INFO → SET</b>.</li>
+        <li>Hides macOS <code>._</code> files. Plays old <code>.RAW</code> clips too.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Play</h3>
+      <ul>
+        <li><code>.PRX</code> proxy: built on the first play (<code>PRX+</code>), then real time at the clip's fps.</li>
+        <li>Sound from the MLV, in sync, during proxy playback. Mute, 1–5, +6 dB, +12 dB.</li>
+        <li>Pause, previous / next clip, back to the gallery, progress bar.</li>
+        <li>4-step zoom, pan with the arrows (zoom reads the raw).</li>
+        <li><code>exact</code>: real-time pacing. <code>all</code>: every frame.</li>
+        <li>EOS-M: still runs when DryOS is out of task slots. Touch is ignored.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Look</h3>
+      <ul>
+        <li>Superpixel renderer (default): 10, 12 and 14-bit, uncompressed and LJ92.</li>
+        <li>1x3 clips desqueezed automatically (RAWC).</li>
+        <li>Bayer phase detected: no magenta on 1x3.</li>
+        <li>Right colours: BT.709 on the 5D3, BT.601 on EOS-M.</li>
+        <li>LUTs: Orig, Rec709, Kodak, Warm, Teal, B&amp;W, plus your own <code>.cube</code> files in <code>ML/LUTS/</code> (up to 24).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mp-tables">
+    <div>
+      <h3>Controls</h3>
+      <div class="table-scroll">
+        <table class="keys-table">
+          <thead><tr><th>Key</th><th>Gallery</th><th>Playback</th></tr></thead>
+          <tbody>
+            <tr><td>SET</td><td>Play clip</td><td>Show the playback bar</td></tr>
+            <tr><td>Arrows / wheel</td><td>Select clip</td><td>Wheel ◀ ▶: previous / next clip</td></tr>
+            <tr><td>PLAY</td><td>Exit</td><td>Pause / play</td></tr>
+            <tr><td>INFO</td><td>Clip details</td><td>Info text on / off</td></tr>
+            <tr><td>TRASH</td><td>Delete (starts on Cancel)</td><td>Delete</td></tr>
+            <tr><td>RATE</td><td>–</td><td>Next LUT</td></tr>
+            <tr><td>ZOOM</td><td>–</td><td>Zoom, arrows to pan</td></tr>
+            <tr><td>Q</td><td>–</td><td>Show / hide the playback bar</td></tr>
+            <tr><td>MENU</td><td>Exit</td><td>Back to the gallery</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fine">Playback bar: Grid · ◀◀ · pause · ▶▶ · quality (color / fast / super) · LUT · volume · exact / all · Delete · Quit. Quality, LUT, volume and exact / all are remembered.</p>
+    </div>
+    <div>
+      <h3>vs. stock mlv_play</h3>
+      <div class="table-scroll">
+        <table class="vs-table">
+          <thead><tr><th></th><th>Stock</th><th>Crop Mor3</th></tr></thead>
+          <tbody>
+            <tr><td>Bayer phase</td><td>Fixed</td><td>Detected per clip</td></tr>
+            <tr><td>Real time from SD</td><td>No</td><td>Yes, with <code>.PRX</code></td></tr>
+            <tr><td>Sound</td><td>No</td><td>Yes (proxy playback)</td></tr>
+            <tr><td>Browsing</td><td>Next / previous</td><td>Gallery, thumbnails, clip details</td></tr>
+            <tr><td>Looks</td><td>–</td><td>6 LUTs + your <code>.cube</code></td></tr>
+            <tr><td>Delete</td><td>Press again within 5&nbsp;s</td><td>Confirm screen, starts on Cancel</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LIMITATIONS ============ -->
+<section id="limits" class="wrap section">
+  <div class="section-head">
+    <h2>Known limitations</h2>
+  </div>
+  <div class="card limits">
+    <ul>
+      <li><b>Pink or broken LiveView:</b> sometimes, when returning to LiveView, the picture is pink or broken. Open and close the ML menu (<b>TRASH</b> twice) to fix it.</li>
+      <li><b>Tested on SD only:</b> all modes were tested on an SD card with an overclocked bus (<code>sd_uhs</code>). CF cards and long takes are not tested yet. How long you can record depends on your card.</li>
+      <li><b>2.3K–3.5K 1:1 crop</b> need a fast card. <b>5.4K (2040p)</b> is 24p only.</li>
+      <li><b>1:1 crop frame rate:</b> these modes run in Canon's x5 LiveView at 29.776 fps. Set <em>Movie → FPS override</em> to 23.976 for 24p.</li>
+      <li><b>3x3 High-FPS</b> modes only work with Canon's movie mode set to 720p 50/60fps.</li>
+      <li><b>Panning</b> the 1:1 window works in 1280p, 1080p and 816p. 2.3K–3.5K record a wider window but LiveView shows the center 1920 px.</li>
+      <li><b>Tall height:</b> 1x3 modes read at most 1920 lines (2040 in 5.4K). Taller readouts were unstable (black level drops), so they are not offered.</li>
+      <li><b>Firmware:</b> 5D Mark III 1.1.3 and 1.2.3 only. EOS-M gets <code>mlv_play</code> only.</li>
+      <li><b>mlv_play:</b> real-time playback needs a <code>.PRX</code> proxy, built on the first play (that first play is slower). Sound plays only from the proxy. A proxy takes 170–345 KB per frame depending on the aspect ratio (≈ 250–500 MB per minute at 24p). Delete <code>.PRX</code> files to free space; they are rebuilt when needed.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ INSTALL ============ -->
+<section id="install" class="wrap section">
+  <div class="section-head">
+    <h2>Install</h2>
+    <p>Your card must already boot Magic Lantern. The zip is just <code>autoexec.bin</code> + <code>ML/</code>: no <code>ML-SETUP.FIR</code>, no ROM, NVRAM or bootflag writes.</p>
+  </div>
+  <div class="install">
+    <div class="card">
+      <h3>5D Mark III <small>1.1.3 or 1.2.3</small></h3>
+      <ol>
+        <li>Make sure your CF/SD card already boots Magic Lantern on your firmware.</li>
+        <li>Download the zip that matches your firmware: <code>…-5D3.113.zip</code> or <code>…-5D3.123.zip</code>.</li>
+        <li>Extract <code>autoexec.bin</code> and the <code>ML/</code> folder to the root of the card. The needed modules are already enabled through <code>ML/SETTINGS/*.EN</code>.</li>
+        <li>Boot the camera, open the ML menu → <b>Modules</b>, and check that <code>crop_rec</code> (<b>Crop Mor3</b>), <code>mlv_lite</code>, <code>mlv_play</code> and <code>silent</code> are loaded.</li>
+        <li>Press <b>ERASE</b> (trash) to open the ML menu. In the Movie tab, go to <b>Crop Mor3</b>, choose a mode with SET (<code>1:1 crop</code> / <code>1x3</code> / <code>3x3</code>), and press Q for Preset.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>EOS-M <small>2.0.2 · mlv_play only</small></h3>
+      <ol>
+        <li>Download <code>…-EOSM.202-mlv_play.zip</code>.</li>
+        <li>Copy <code>ML/MODULES/mlv_play.mo</code> to your existing Crop-Mood card, replacing the old file.</li>
+        <li>Make sure <code>mlv_play</code> and <code>silent</code> are enabled in ML menu → <b>Modules</b>.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="note">
+    <b>macOS:</b> When you copy to FAT32/exFAT cards, use <code>cp -X</code> or delete the <code>._*</code> files afterwards. Otherwise DryOS can see them as ghost modules or clips. The release zips are already packaged without them.
+  </div>
+</section>
+
+<!-- ============ DOWNLOAD ============ -->
+<section id="download" class="wrap section">
+  <div class="section-head">
+    <h2>Download</h2>
+    <p>On GitHub Releases. Check the SHA-256 below.</p>
+  </div>
+  <div class="table-scroll">
+    <table class="files">
+      <thead><tr><th>File</th><th>For</th><th>SHA-256</th></tr></thead>
+      <tbody>
+        <tr><td><a data-asset="crop_mor3-v0.3.1-5D3.113.zip" href="#download">crop_mor3-v0.3.1-5D3.113.zip</a></td><td>5D Mark III 1.1.3</td><td><code class="hash">6fe1cddbcf86cdf758b623455701729b2d52e3412309403ed61e9a8f9aa09252</code></td></tr>
+        <tr><td><a data-asset="crop_mor3-v0.3.1-5D3.123.zip" href="#download">crop_mor3-v0.3.1-5D3.123.zip</a></td><td>5D Mark III 1.2.3</td><td><code class="hash">e91b8d1674963d78eed57867f7e978a02bafbac90040f1d9c206b0fc9f0ab05b</code></td></tr>
+        <tr><td><a data-asset="crop_mor3-v0.3.1-EOSM.202-mlv_play.zip" href="#download">crop_mor3-v0.3.1-EOSM.202-mlv_play.zip</a></td><td>EOS-M 2.0.2</td><td><code class="hash">7b9450ff525f73f74db4bc2e88c6148002de69bc0fcc4a9b088c963dfba20d29</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><a class="btn" data-repo="/releases" href="#download">All releases</a></p>
+
+  <div class="changelog card">
+    <h3>What's new in v0.3.1</h3>
+    <ul>
+      <li><b>mlv_play colours:</b> the superpixel renderer uses BT.709 on the 5D3, like the stock colour preview (EOS-M keeps BT.601). 11-bit tone table: smoother shadows.</li>
+      <li><b>mlv_play speed:</b> info text is only repainted when it changes, and frames are no longer read back from LCD memory (superpixel and <code>.PRX</code> playback).</li>
+      <li>Module descriptions in the ML Modules menu updated (mlv_lite, mlv_play, Crop Mor3).</li>
+      <li>Removed a leftover debug log (<code>ML/LOGS/CMLIVE.LOG</code>).</li>
+    </ul>
+    <a data-repo="/blob/main/CHANGELOG.md" href="#download">Full changelog →</a>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p>Unofficial community modules. Not affiliated with Canon or Magic Lantern. Use at your own risk.</p>
+    <p>© 2026 Özcan Çelik. Licensed under the <a data-repo="/blob/main/LICENSE" href="#top">GNU GPL v2.0</a>. Module source code is in <a data-repo="/tree/main/src" href="#top"><code>src/</code></a>.</p>
+  </div>
+</footer>
+
+</body>
+</html>
