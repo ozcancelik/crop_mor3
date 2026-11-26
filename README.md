@@ -16,6 +16,9 @@ Magic Lantern modules for the **Canon EOS 5D Mark III** (plus an `mlv_play` drop
 > **Download ready-to-use packages from the [Releases](../../releases) page.**
 > These packages **never** include `ML-SETUP.FIR` and do not touch Canon ROM, NVRAM, or bootflags. Your card must already be bootable with official Magic Lantern.
 
+> [!WARNING]
+> **AI-assisted, not independently verified.** The register values, firmware addresses and hooks in these modules were found with the help of an AI model (LLM) during reverse engineering. Every mode was tested on my own cameras, but none of it has been reviewed or confirmed by Magic Lantern developers. Some values may be wrong or cause crashes in situations I haven't tested. Use at your own risk.
+
 ---
 
 ## Supported Cameras & Modes
