@@ -103,12 +103,13 @@ Playback bar: Grid · ◀◀ · pause · ▶▶ · quality (color / fast / super
 
 ## Known limitations
 
-- **Pink or broken LiveView:** sometimes, when returning to LiveView, the picture is pink or broken. Open and close the ML menu (**TRASH** twice) to fix it.
+- **Pink or broken LiveView:** sometimes, when returning to LiveView, the picture is pink or broken. Press **MENU** to open Canon's menu, then press **MENU** again to close it; LiveView comes back clean.
 - **Tested on SD only:** all modes were tested on an SD card with an overclocked bus (`sd_uhs`). CF cards and long takes are not tested yet. How long you can record depends on your card.
 - **2.3K–3.5K 1:1 crop** need a fast card. **5.4K (2040p)** is 24p only.
 - **1:1 crop frame rate:** these modes run in Canon's x5 LiveView at `29.776 fps`. Set **Movie → FPS override** to `23.976` for 24p.
 - **3x3 High-FPS** modes only work with Canon's movie mode set to **720p 50/60fps**.
 - **Panning** the 1:1 window works in 1280p, 1080p and 816p. 2.3K–3.5K record a wider window but LiveView shows the center 1920 px.
+- **Panning and recording:** while panning the 1:1 window with the joystick, LiveView can sometimes turn pink or broken. Don't start recording in that state: recording stops with a `Compression error` (an `ASSERT` log on the card). Press **MENU** twice (open and close Canon's menu) to get a clean picture, then record.
 - **Tall height:** 1x3 modes read at most 1920 lines (2040 in 5.4K). Taller readouts were unstable (black level drops), so they are not offered.
 - **Firmware:** 5D Mark III 1.1.3 and 1.2.3 only. EOS-M gets `mlv_play` only.
 - **mlv_play:**

@@ -317,12 +317,13 @@
   </div>
   <div class="card limits">
     <ul>
-      <li><b>Pink or broken LiveView:</b> sometimes, when returning to LiveView, the picture is pink or broken. Open and close the ML menu (<b>TRASH</b> twice) to fix it.</li>
+      <li><b>Pink or broken LiveView:</b> sometimes, when returning to LiveView, the picture is pink or broken. Press <b>MENU</b> to open Canon's menu, then press <b>MENU</b> again to close it; LiveView comes back clean.</li>
       <li><b>Tested on SD only:</b> all modes were tested on an SD card with an overclocked bus (<code>sd_uhs</code>). CF cards and long takes are not tested yet. How long you can record depends on your card.</li>
       <li><b>2.3K–3.5K 1:1 crop</b> need a fast card. <b>5.4K (2040p)</b> is 24p only.</li>
       <li><b>1:1 crop frame rate:</b> these modes run in Canon's x5 LiveView at 29.776 fps. Set <em>Movie → FPS override</em> to 23.976 for 24p.</li>
       <li><b>3x3 High-FPS</b> modes only work with Canon's movie mode set to 720p 50/60fps.</li>
       <li><b>Panning</b> the 1:1 window works in 1280p, 1080p and 816p. 2.3K–3.5K record a wider window but LiveView shows the center 1920 px.</li>
+      <li><b>Panning and recording:</b> while panning the 1:1 window with the joystick, LiveView can sometimes turn pink or broken. Don't start recording in that state: recording stops with a <code>Compression error</code> (an <code>ASSERT</code> log on the card). Press <b>MENU</b> twice (open and close Canon's menu) to get a clean picture, then record.</li>
       <li><b>Tall height:</b> 1x3 modes read at most 1920 lines (2040 in 5.4K). Taller readouts were unstable (black level drops), so they are not offered.</li>
       <li><b>Firmware:</b> 5D Mark III 1.1.3 and 1.2.3 only. EOS-M gets <code>mlv_play</code> only.</li>
       <li><b>mlv_play:</b> real-time playback needs a <code>.PRX</code> proxy, built on the first play (that first play is slower). Sound plays only from the proxy. A proxy takes 170–345 KB per frame depending on the aspect ratio (≈ 250–500 MB per minute at 24p). Delete <code>.PRX</code> files to free space; they are rebuilt when needed.</li>
