@@ -9,7 +9,7 @@
 Magic Lantern modules for the **Canon EOS 5D Mark III** (plus an `mlv_play` drop-in for **EOS-M**):
 
 - **`crop_rec.mo`** (**Crop Mor3**) — Drop-in replacement for `crop_rec.mo` on 5D Mark III with EOS M-style `1:1 crop` (`1280p` / `1080p` / `816p` / `2.3K` / `3.1K` / `3.5K`), `1x3` tall anamorphic (`3.4K` / `4.5K` / `5.4K 2040p` / `5.7K`), and `3x3` High-FPS (`50/60p` / `45/48p Tall` / `2.40:1 Scope`) LiveView preview and RAW readout modes.
-- **`mlv_lite.mo`** — Matching `1x3` tall anamorphic (up to `2040p`), `1:1 crop`, & `3x3` High-FPS RAW recording (`10/12/14-bit` lossless & uncompressed) with clean `RAWC` binning metadata and symmetric framing guides.
+- **`mlv_lite.mo`** — Matching `1x3` tall anamorphic (up to `2040p`), `1:1 crop`, & `3x3` High-FPS RAW recording (`10/12/14-bit` lossless & uncompressed) with clean `RAWC` binning metadata and symmetric framing guides. Experimental **LJ92 Huffman: Optimized** option for smaller 8–12-bit lossless files (about −15 to −25% at 12-bit, −30 to −45% at 10/11-bit).
 - **`mlv_play.mo`** — Rewritten MLV player: gallery with thumbnails and clip details, real-time `.PRX` proxies with sound, LUTs and `.cube` files, 10/12/14-bit and LJ92. See [mlv_play](#mlv_play) below.
 
 > [!IMPORTANT]
@@ -64,6 +64,7 @@ In the **Movie → Crop Mor3** menu, press **SET** to cycle the readout family (
 
 **Play**
 - `.PRX` proxy: built on the first play (`PRX+`), then real time at the clip's fps.
+- A proxy takes 170–345 KB per frame depending on the aspect ratio (≈ 250–500 MB per minute at 24p). Delete `.PRX` files to free space; they are rebuilt when needed.
 - Sound from the MLV, in sync, during proxy playback. Mute, 1–5, +6 dB, +12 dB.
 - Pause, previous / next clip, back to the gallery, progress bar.
 - 4-step zoom, pan with the arrows (zoom reads the raw).
@@ -104,21 +105,25 @@ Playback bar: Grid · ◀◀ · pause · ▶▶ · quality (color / fast / super
 
 ---
 
-## Known limitations
+## Tips
 
-- **Pink or broken LiveView:** sometimes, when returning to LiveView, the picture is pink or broken. Press **MENU** to open Canon's menu, then press **MENU** again to close it; LiveView comes back clean.
-- **Tested on SD only:** all modes were tested on an SD card with an overclocked bus (`sd_uhs`). CF cards and long takes are not tested yet. How long you can record depends on your card.
-- **2.3K–3.5K 1:1 crop** need a fast card. **5.4K (2040p)** is 24p only.
-- **1:1 crop frame rate:** these modes run in Canon's x5 LiveView at `29.776 fps`. Set **Movie → FPS override** to `23.976` for 24p.
-- **3x3 High-FPS** modes only work with Canon's movie mode set to **720p 50/60fps**.
-- **Panning** the 1:1 window works in 1280p, 1080p and 816p. 2.3K–3.5K record a wider window but LiveView shows the center 1920 px.
-- **Panning and recording:** while panning the 1:1 window with the joystick, LiveView can sometimes turn pink or broken. Don't start recording in that state: recording stops with a `Compression error` (an `ASSERT` log on the card). Press **MENU** twice (open and close Canon's menu) to get a clean picture, then record.
+- **24p in 1:1 crop:** these modes run in Canon's x5 LiveView at `29.776 fps`. Set **Movie → FPS override** to `23.976`.
+- **3x3 High-FPS:** set Canon's movie mode to **720p 50/60fps** first.
+- **Panning:** move the 1:1 window with the joystick in 1280p, 1080p and 816p.
+- **Card speed:** 2.3K–3.5K 1:1 crop need a fast card. How long you can record depends on your card.
+
+## Limitations
+
+- **2.3K–3.5K preview:** these modes record a wider window, but LiveView shows only the center 1920 px.
+- **5.4K (2040p)** is 24p only.
 - **Tall height:** 1x3 modes read at most 1920 lines (2040 in 5.4K). Taller readouts were unstable (black level drops), so they are not offered.
 - **Firmware:** 5D Mark III 1.1.3 and 1.2.3 only. EOS-M gets `mlv_play` only.
-- **mlv_play:**
-  - Real-time playback needs a `.PRX` proxy, built on the first play (that first play is slower).
-  - Sound plays only from the proxy.
-  - A proxy takes 170–345 KB per frame depending on the aspect ratio (≈ 250–500 MB per minute at 24p). Delete `.PRX` files to free space; they are rebuilt when needed.
+- **mlv_play:** sound plays only during proxy playback.
+
+## Experimental / not tested
+
+- **Cards:** all modes were tested on an SD card with an overclocked bus (`sd_uhs`). CF cards and long takes are not tested yet.
+- **LJ92 Huffman: Optimized** is experimental. Files open in MLV App and in `mlv_play`; other tools that ship their own LJ92 decoder are not tested. Leave it on **Canon** if in doubt.
 
 ---
 
@@ -128,7 +133,7 @@ Playback bar: Grid · ◀◀ · pause · ▶▶ · quality (color / fast / super
 1. Ensure your SD/CF card is already bootable with Magic Lantern (`1.1.3` or `1.2.3`).
 2. Download `crop_mor3-vX.Y.Z-5D3.113.zip` or `crop_mor3-vX.Y.Z-5D3.123.zip` from **Releases**.
 3. Extract `autoexec.bin` and the `ML/` folder directly to the root of your card (required modules are pre-enabled via `ML/SETTINGS/*.EN`).
-4. Boot the camera, open ML Menu → **Modules**, and confirm `crop_rec.mo` (**Crop Mor3**), `mlv_lite.mo`, `mlv_play.mo`, and `silent.mo` are loaded.
+4. Boot the camera, open ML Menu → **Modules**, and confirm `crop_rec.mo` (**Crop Mor3**), `mlv_lite.mo`, `mlv_play.mo`, and `silent.mo` are loaded. On a fresh install, **Crop Mor3** (`1:1 crop 1280p`) and **RAW video** are already on.
 
 ### Canon EOS-M (2.0.2)
 1. Download `crop_mor3-vX.Y.Z-EOSM.202-mlv_play.zip` from **Releases**.

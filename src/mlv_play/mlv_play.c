@@ -2846,6 +2846,29 @@ static int sp_log2_q8(uint32_t x)
     return (msb << 8) | ((x >> 23) & 0xFF);
 }
 
+/* Digital-gain clips (mlv_lite 12..8-bit lossless) keep a 14-bit container but use only
+ * black..white (e.g. 2047..2932 at 10-bit). Index the LUT by the bits the values really use,
+ * not the container: 10-bit gets ~440 LUT steps instead of ~110 (no per-pixel cost). */
+static int sp_eff_vbits(int vbits, int white)
+{
+    if (white <= 0) return vbits;
+    uint32_t lim = (uint32_t)white + ((uint32_t)white >> 3);   /* small margin above white */
+    int b = 0;
+    while (b < 31 && (lim >> b)) b++;
+    return (b >= 8 && b < vbits) ? b : vbits;
+}
+
+/* Real bit depth of a clip: container bpp minus the digital-gain steps (range vs full scale). */
+static int sp_real_bits(int bpp, int black, int white)
+{
+    int full = (1 << bpp) - black;
+    int range = white - black;
+    if (bpp < 8 || bpp > 16 || range <= 0 || full <= 0) return bpp;
+    int k = 0;
+    while (k < 6 && bpp - k > 8 && ((range << k) * 3 < full * 2)) k++;
+    return bpp - k;
+}
+
 static void sp_build_lut(int value_bits, int black, int white)
 {
     int in_shift = MAX(value_bits, SP_IDX_BITS) - SP_IDX_BITS;
@@ -2977,7 +3000,7 @@ static void sp_render(frame_buf_t *b)
     int H = vr->height;
     int pitch = vr->pitch;
     int cbits = b->bitDepth;
-    int vbits = b->valueBits;
+    int vbits = sp_eff_vbits(b->valueBits, b->whiteLevel);
     int xres = b->xRes & ~1;
     int yres = b->yRes & ~1;
     uint32_t rpitch = b->xRes * cbits / 8;
@@ -3105,6 +3128,7 @@ static int sp_render_to_buf(const void *raw_data, int xres, int yres, int cbits,
                             int black, int white, int ax, int ay,
                             uint8_t *dst_uyvy, int W, int H)
 {
+    vbits = sp_eff_vbits(vbits, white);
     xres &= ~1;
     yres &= ~1;
     W &= ~1;
@@ -5127,7 +5151,7 @@ static void mlv_play_mlv(char *filename, FILE **chunk_files, uint32_t chunk_coun
                     snprintf(buffer->messages.topLeft, SCREEN_MSG_LEN, "%02d.%02d.%04d %02d:%02d:%02d", rtci_block.tm_mday, rtci_block.tm_mon + 1, 1900 + rtci_block.tm_year, rtci_block.tm_hour, rtci_block.tm_min, rtci_block.tm_sec);
                 }
                 
-                snprintf(buffer->messages.botLeft, SCREEN_MSG_LEN, "%s: %dx%d %dbpp%s", filename, rawi_block.xRes, rawi_block.yRes, rawi_block.raw_info.bits_per_pixel, (main_header.videoClass & MLV_VIDEO_CLASS_FLAG_LJ92)?" LJ92":"");
+                snprintf(buffer->messages.botLeft, SCREEN_MSG_LEN, "%s: %dx%d %dbpp%s", filename, rawi_block.xRes, rawi_block.yRes, sp_real_bits(rawi_block.raw_info.bits_per_pixel, rawi_block.raw_info.black_level, rawi_block.raw_info.white_level), (main_header.videoClass & MLV_VIDEO_CLASS_FLAG_LJ92)?" LJ92":"");
                 snprintf(buffer->messages.botRight, SCREEN_MSG_LEN, "%s%d/%d",
                          prx_hit ? ((aud_ready && mlv_play_audio > 0) ? "PRX A " : "PRX ") :
                          ((prx_mode == PRX_BUILD) ? "PRX+ " : ""),
@@ -5995,7 +6019,7 @@ static int gal_build_thm_mlv(const char *mlv_path, uint32_t file_size, mlv_thm_h
             have_rawi = 1;
             hdr->xRes = rawi_hdr.xRes;
             hdr->yRes = rawi_hdr.yRes;
-            hdr->bpp  = (uint8_t)rawi_hdr.raw_info.bits_per_pixel;
+            hdr->bpp  = (uint8_t)sp_real_bits(rawi_hdr.raw_info.bits_per_pixel, rawi_hdr.raw_info.black_level, rawi_hdr.raw_info.white_level);
         }
         else if (!memcmp(blk.blockType, "RAWC", 4))
         {
@@ -6311,7 +6335,7 @@ static void gal_draw_footer(const playlist_entry_t *e, const mlv_thm_hdr_t *hdr,
 typedef struct
 {
     int      have_mlvi, have_rawi, have_rawc, have_rtci, have_expo, have_lens, have_wbal, have_wavi;
-    uint16_t xRes, yRes, bpp, blackLevel;
+    uint16_t xRes, yRes, bpp, blackLevel, whiteLevel;
     uint8_t  xBin, yBin, isLossless, isRaw;
     uint32_t fps100, frameCount, fileSize;
     uint16_t yr, mon, day, hr, min, sec;
@@ -6382,6 +6406,7 @@ static void gal_read_detail(const playlist_entry_t *e, const mlv_thm_hdr_t *thm,
                 d->yRes = h.yRes;
                 d->bpp  = h.raw_info.bits_per_pixel;
                 d->blackLevel = h.raw_info.black_level;
+                d->whiteLevel = h.raw_info.white_level;
             }
         }
         else if (!memcmp(blk.blockType, "RAWC", 4))
@@ -6524,7 +6549,7 @@ static void gal_draw_detail_popup(const playlist_entry_t *e, const gal_detail_t 
     bmp_printf(FONT(FONT_MED, COLOR_GRAY(70), COLOR_ALMOST_BLACK), lx, y, "Format");
     bmp_printf(FONT(FONT_MED, COLOR_YELLOW, COLOR_ALMOST_BLACK), vx, y,
                "%d-bit %s   OB:%d",
-               d->bpp ? d->bpp : 14,
+               d->bpp ? sp_real_bits(d->bpp, d->blackLevel, d->whiteLevel) : 14,
                d->isRaw ? "RAW" : (d->isLossless ? "LJ92 Lossless" : "Uncompressed"),
                d->blackLevel);
     y += dy;

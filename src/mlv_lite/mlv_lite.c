@@ -74,6 +74,7 @@
 #include "timer.h"
 #include "ml-cbr.h"
 #include "../silent/lossless.h"
+#include "crc32.h"
 #include "ml-cbr.h"
 #include "../crop_rec/crop_rec.h"
 
@@ -128,7 +129,7 @@ static const char * aspect_ratio_choices[] =       {"5:1","4:1","3:1","2.67:1","
 
 /* config variables */
 
-CONFIG_INT("raw.video.enabled", raw_video_enabled, 0);
+CONFIG_INT("raw.video.enabled", raw_video_enabled, 1); /* Crop Mor3 package: RAW on out of the box */
 
 /* Card spanning */
 static CONFIG_INT("raw.card_spanning", card_spanning, 0);
@@ -1305,6 +1306,80 @@ static MENU_UPDATE_FUNC(write_speed_update)
     }
 }
 
+/* Optimized LJ92 Huffman tables (5D3 only, experimental).
+ * Canon's TTL encoder copies its DHT table from a RAM copy of ParameterTable 0x00030005
+ * into JP57 (0xC0E20400/0440) on every frame, and the hardware emits the DHT segment from
+ * the same registers, so files stay self-describing. Canon's table is tuned for 14-bit;
+ * the tables below (one per digital-gain bit depth, 15 symbols, max length 10, all-ones
+ * code reserved like Canon's) were built offline from 36 5D3 clips, ISO 100-5000.
+ * RAM only: written at recording start, Canon's table restored at recording end. */
+static CONFIG_INT("raw.lj92.huff", lj92_huff_opt, 0);
+
+/* Canon's table is not stored here: we only check the standard CRC-32 of the two RAM
+ * tables (Table0 + Table1, 96 bytes; same on 1.1.3 and 1.2.3), keep the camera's own copy
+ * and put it back after recording. */
+#define LJ92_CANON_DHT_CRC32 0x42E55C04
+static uint8_t lj92_canon_saved[96];      /* camera's own tables, copied from RAM before we write ours */
+
+static const uint8_t lj92_opt_dht[5][31] = {
+    /* 12-bit */ {0x00, 0x02, 0x03, 0x01, 0x01, 0x01, 0x01, 0x00, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                  0x03, 0x04, 0x02, 0x05, 0x06, 0x01, 0x00, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E},
+    /* 11-bit */ {0x00, 0x03, 0x01, 0x01, 0x01, 0x01, 0x00, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                  0x02, 0x03, 0x04, 0x01, 0x05, 0x00, 0x06, 0x07, 0x08, 0x0C, 0x09, 0x0A, 0x0B, 0x0D, 0x0E},
+    /* 10-bit */ {0x00, 0x03, 0x01, 0x01, 0x01, 0x01, 0x00, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                  0x01, 0x02, 0x03, 0x00, 0x04, 0x05, 0x06, 0x07, 0x0B, 0x08, 0x09, 0x0A, 0x0C, 0x0D, 0x0E},
+    /*  9-bit */ {0x00, 0x03, 0x01, 0x01, 0x01, 0x00, 0x02, 0x02, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x0A, 0x07, 0x08, 0x09, 0x0B, 0x0C, 0x0D, 0x0E},
+    /*  8-bit */ {0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x02, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x09, 0x06, 0x07, 0x0A, 0x08, 0x0B, 0x0C, 0x0D, 0x0E},
+};
+
+static int lj92_huff_active = 0;         /* bit depth of the table currently in RAM, 0 = Canon's */
+static uint8_t lj92_huff_table[48];      /* our table as written (for the end-of-recording check) */
+static char lj92_huff_msg[32] = "";
+
+/* RAM copy of Table0 (Table1 follows at +0x30); literal in TTL_SetupEncoder */
+static uint8_t * lj92_dht_ram()
+{
+    if (is_camera("5D3", "1.1.3")) return (uint8_t *) 0x000584E0;
+    if (is_camera("5D3", "1.2.3")) return (uint8_t *) 0x00058558;
+    return 0;
+}
+
+static void lj92_huff_restore()
+{
+    if (!lj92_huff_active) return;
+    uint8_t * p = lj92_dht_ram();
+    int kept = !memcmp(p, lj92_huff_table, 48) && !memcmp(p + 48, lj92_huff_table, 48);
+    memcpy(p, lj92_canon_saved, 96);
+    snprintf(lj92_huff_msg, sizeof(lj92_huff_msg), kept ? "last: %d-bit OK" : "last: %d-bit, lost!", lj92_huff_active);
+    lj92_huff_active = 0;
+}
+
+static void lj92_huff_apply(int bpp_d)
+{
+    lj92_huff_restore();
+    if (!lj92_huff_opt || output_format < OUTPUT_14BIT_LOSSLESS || bpp_d < 8 || bpp_d > 12) return;
+    uint8_t * p = lj92_dht_ram();
+    if (!p) return;
+
+    /* only touch it if both RAM tables are exactly Canon's */
+    static int crc_ready = 0;
+    if (!crc_ready) { crc32_init(); crc_ready = 1; }
+    if ((crc32(p, 96, CRC32_DEFAULT_SEED) ^ 0xFFFFFFFF) != LJ92_CANON_DHT_CRC32)
+    {
+        snprintf(lj92_huff_msg, sizeof(lj92_huff_msg), "RAM mismatch, skipped");
+        return;
+    }
+
+    memcpy(lj92_canon_saved, p, 96);
+    memset(lj92_huff_table, 0, sizeof(lj92_huff_table));
+    memcpy(lj92_huff_table, lj92_opt_dht[12 - bpp_d], 31);
+    memcpy(p, lj92_huff_table, 48);
+    memcpy(p + 48, lj92_huff_table, 48);
+    lj92_huff_active = bpp_d;
+}
+
 /* for lossless compression: on recording start/stop, in standby
  * we configure this in standby to estimate compression ratio
  * when BPP_D is 14, it will restore default settings */
@@ -1343,12 +1418,14 @@ void setup_bit_depth()
 {
     raw_lv_request_bpp(BPP);
     setup_bit_depth_digital_gain(0);
+    lj92_huff_apply(BPP_D);
 }
 
 /* called when recording ends, or when raw video is turned off */
 static REQUIRES(settings_sem)
 void restore_bit_depth()
 {
+    lj92_huff_restore();
     raw_lv_request_bpp(14);
     setup_bit_depth_digital_gain(1);
 }
@@ -1689,6 +1766,27 @@ static MENU_UPDATE_FUNC(aspect_ratio_update)
         aspect_ratio_update_info(entry, info);
     }
     write_speed_update(entry, info);
+}
+
+static MENU_UPDATE_FUNC(lj92_huff_update)
+{
+    if (!lj92_dht_ram())
+    {
+        MENU_SET_WARNING(MENU_WARN_NOT_WORKING, "Only on 5D3 1.1.3 / 1.2.3.");
+    }
+    else if (output_format < OUTPUT_14BIT_LOSSLESS)
+    {
+        MENU_SET_WARNING(MENU_WARN_NOT_WORKING, "Only for lossless formats.");
+    }
+    else if (lj92_huff_opt && BPP_D == 14)
+    {
+        MENU_SET_WARNING(MENU_WARN_INFO, "14-bit keeps Canon's table (already optimal).");
+    }
+
+    if (lj92_huff_msg[0])
+    {
+        MENU_SET_RINFO("%s", lj92_huff_msg);
+    }
 }
 
 static MENU_UPDATE_FUNC(output_format_update)
@@ -4623,6 +4721,16 @@ static struct menu_entry raw_video_menu[] =
                               "14-bit compressed with Canon's Lossless JPEG. Recommended ISO < 100.\n"
                               "Signal divided by 4 before compression. Recommended ISO 100-1600.\n"
                               "Signal divided by 8/16/32/64 before compression, depending on ISO.\n"
+            },
+            {
+                .name       = "LJ92 Huffman",
+                .priv       = &lj92_huff_opt,
+                .max        = 1,
+                .update     = lj92_huff_update,
+                .choices    = CHOICES("Canon", "Optimized"),
+                .help       = "Huffman table for 12...8-bit lossless (5D3, experimental).",
+                .help2      = "Canon: stock table (tuned for 14-bit).\n"
+                              "Optimized: per bit depth table, smaller files, same pixels.\n"
             },
             {
                 .name = "Preview",

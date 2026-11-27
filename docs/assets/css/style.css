@@ -269,6 +269,8 @@ tbody tr:last-child td { border-bottom: 0; }
 .limits ul { margin: 0; padding-left: 1.1em; color: var(--muted); }
 .limits li { margin-bottom: 8px; }
 .limits b { color: var(--text); }
+.limits h3 { font-size: 1rem; margin: 0 0 0.5em; }
+.limits ul + h3 { margin-top: 1.2em; }
 .install { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 800px) { .install { grid-template-columns: 1fr; } }
 .install ol { margin: 0; padding-left: 1.2em; color: var(--muted); }

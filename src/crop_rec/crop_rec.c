@@ -135,6 +135,8 @@ typedef struct {
     int      l1_5f54_reg;
     uint32_t x1_sslt_a3_addr, x1_sslt_a11_addr;
     uint32_t x1_hiv_yb_addr, hfps_hiv_yb_addr, lv_state_addr;
+    uint32_t x1_hiv_hook; /* LVx1_StartPreproPath: MOV R3,#0x40000000 before SetEDmac(0x18, R1 = HIV-V table, R2 = edmac_info) */
+    uint32_t x5_pan_hook; /* LVx5_StartPreproPath: LDR R0,[R4,#0x50] between LDRH R1/R2 (zoom box X/Y) and BL SSLT_SetWinOffset */
     uint32_t eeko_k1, eeko_k5, eeko_m1, eeko_402, eeko_roi_y, eeko_roi_h;
     uint32_t e1_map[2][4];
     uint32_t s4_tbl[4][3];
@@ -166,6 +168,8 @@ static const cm_fw_t cm_fw_113 = {
     .x1_sslt_a3_addr  = 0xFF995004u,
     .x1_sslt_a11_addr = 0xFF995164u,
     .x1_hiv_yb_addr   = 0x0003268Cu,
+    .x1_hiv_hook      = 0xFF4880E8u,
+    .x5_pan_hook      = 0xFF48A8A0u, /* I-cache idx 5 */
     .hfps_hiv_yb_addr = 0x00033000u,
     .lv_state_addr    = 0x000563BCu,
     .eeko_k1          = 0x01E4C1A4u,
@@ -221,6 +225,8 @@ static const cm_fw_t cm_fw_123 = {
     .x1_sslt_a3_addr  = 0xFF9A66D0u,
     .x1_sslt_a11_addr = 0xFF9A6830u,
     .x1_hiv_yb_addr   = 0x0003260Cu,
+    .x1_hiv_hook      = 0xFF491D9Cu,
+    .x5_pan_hook      = 0xFF4947B8u, /* I-cache idx 61 */
     .hfps_hiv_yb_addr = 0x00032F7Cu,
     .lv_state_addr    = 0x00056414u,
     .eeko_k1          = 0x01E4C2BCu,
@@ -3472,6 +3478,9 @@ static void cm_apply_x1_vscale(int anam);
 static void cm_apply_hfps_vscale(int enable);
 static void cm_x1_tall_unpatch(void);
 static int  cm_x1_tall_patch(void);
+/* prepro / HIV / SSLT yres_delta chosen by cm_x1_tall_patch() (0 = not set: clamp to 662).
+ * > 662 (mode 13, 2070 lines) only when the HIV yb could be set to match (KI-3). */
+static volatile uint32_t cm_x1_prepro_yd = 0;
 static void cm_hfps_tall_unpatch(void);
 static int  cm_hfps_tall_patch(void);
 static int  cm_mode_is_hfps(int m);
@@ -4148,6 +4157,8 @@ static void cm_engio_hook(uint32_t * regs, uint32_t * stack, uint32_t pc)
         else
         {
             uint32_t prepro_yd = (yres_delta > 662) ? 662u : (uint32_t)yres_delta;
+            if (cm_x1_prepro_yd && cm_x1_prepro_yd <= (uint32_t)yres_delta)
+                prepro_yd = cm_x1_prepro_yd;
             if (reg == 0xC0F06804 && val == RAW_5D3_X1)
                 val = ((0x0528u + (uint32_t)yres_delta) << 16) | 0x011Bu;
             else if (reg == 0xC0F06800 && val == 0x00010017u)
@@ -4157,7 +4168,7 @@ static void cm_engio_hook(uint32_t * regs, uint32_t * stack, uint32_t pc)
             else if (reg == 0xC0F07150 && (val == 0x0527u || val == 0x04DEu || val == 0x04EEu))
                 val += (uint32_t)yres_delta;
             else if (prepro_ok && reg == 0xC0F08184 && val == 0x00000525u)
-                val = 0x00000525u + prepro_yd - 30u; /* clamp HIV EDMAC ch 0x18 darkframe table within 1949 lines (0x41BDD148..0x41BE4B28) */
+                val = 0x00000525u + prepro_yd - 30u; /* = HIV ch 0x18 lines: 1950, mode 13: 2070 */
             else if (prepro_ok && (reg == 0xC0F37A70 || reg == 0xC0F37B8C || reg == 0xC0F37AD0) && val == 0x05250207u)
                 val = ((0x0525u + prepro_yd - 30u) << 16) | 0x0207u;
         }
@@ -4374,6 +4385,115 @@ static int hfps_hiv_patched = 0;
 static int hfps_k2_patched = 0;
 static int hfps_m2_patched = 0;
 
+/* HIV-V darkframe table (EDMAC ch 0x18, 16 B per line, read every frame; SetEDmac(0x18, R1 = table,
+ * R2 = edmac_info) in LVx1_StartPreproPath runs once per frame, ~24.6 calls/s).
+ * KI-3 (2026-11-26): mode 13 needs 2070 lines; Canon's table area is valid that far (camera logs 2026-11-27).
+ * KI-4 (2026-11-27): Canon's x1 table ends at line 1318 (stock 0x525 + 1); entry 1318 is not table
+ * data (0105003A 00005268 ...), so every 1x3 tall mode got a dark half line at raw row 1318 in
+ * 8..12-bit lossless (raw type DEFCORRE is taken after HIV; 14-bit CCD is not affected).
+ * Fix: the cm_live task copies Canon's table ONCE per LV start into our buffer with entry 1318
+ * replaced by entry 1316 (same row parity); the hook then only swaps R1 for our buffer.
+ * The first attempt copied 33 KB inside the hook every frame and broke DEFCORRE (M26-2356).
+ * Canon memory is only read. */
+#define HIV_ROW_BYTES   16u
+#define HIV_BAD_ROW     1318u
+#define HIV_MAX_ROWS    2112u
+#define HIV_HOOK_INSN   0xE3A03101u   /* MOV R3, #0x40000000 (same in 1.1.3 and 1.2.3) */
+#define X1_HIV_HOOK     (cm_fw->x1_hiv_hook)
+#define X1_HIV_INFO     (cm_fw->x1_hiv_yb_addr - 0x20u)
+static uint32_t cm_hiv_raw[(HIV_MAX_ROWS * HIV_ROW_BYTES + 64u) / 4u];
+static int cm_hiv_hooked = 0;
+static volatile uint32_t cm_hiv_rows = 0;      /* > 0: hook armed for this many lines */
+static volatile uint32_t cm_hiv_src = 0;       /* Canon table address last seen by the hook */
+static volatile uint32_t cm_hiv_ready_src = 0; /* our buffer holds a copy of this Canon table ... */
+static volatile uint32_t cm_hiv_ready_rows = 0;/* ... for this many lines (0 = no valid copy) */
+static int cm_hiv_t_poll = 0;
+
+static uint32_t cm_hiv_base(void)
+{
+    return ((uint32_t)cm_hiv_raw + 63u) & ~63u & ~0x40000000u;
+}
+
+static inline void cm_hiv_put(uint32_t off, uint32_t v)
+{
+    uint32_t c = cm_hiv_base() + off;
+    MEM(c) = v;
+    MEM(c | 0x40000000u) = v;
+}
+
+static inline uint32_t cm_hiv_src_row(uint32_t r)
+{
+    return (r == HIV_BAD_ROW) ? HIV_BAD_ROW - 2u : r;
+}
+
+static void cm_hiv_hook(uint32_t * regs, uint32_t * stack, uint32_t pc)
+{
+    uint32_t rows = cm_hiv_rows;
+    uint32_t src = regs[1];
+    if (!rows || !cm_1x3_active || regs[2] != X1_HIV_INFO || MEM(X1_HIV_YB_ADDR) + 1u != rows ||
+        src < 0x1000u || (src & 3u) || ((src & ~0x40000000u) >= 0x20000000u))
+        return;                      /* not our tall x1 path: Canon's table */
+    cm_hiv_src = src;
+    if (cm_hiv_ready_src != src || cm_hiv_ready_rows != rows)
+        return;                      /* copy not ready yet (cm_hiv_poll): Canon's table this frame */
+    regs[1] = cm_hiv_base() | 0x40000000u;
+}
+
+/* rows > HIV_BAD_ROW + 1: arm the hook. Otherwise disarm (Canon table). */
+static int cm_hiv_arm(uint32_t rows)
+{
+    if (rows <= HIV_BAD_ROW + 1u || rows > HIV_MAX_ROWS)
+    {
+        cm_hiv_rows = 0;
+        cm_hiv_ready_rows = 0;
+        if (cm_hiv_hooked) { unpatch_memory(X1_HIV_HOOK); cm_hiv_hooked = 0; }
+        return 0;
+    }
+    if (!cm_hiv_hooked)
+    {
+        if (MEM(X1_HIV_HOOK) != HIV_HOOK_INSN) return 0;
+        if (patch_hook_function(X1_HIV_HOOK, HIV_HOOK_INSN, cm_hiv_hook, "crop_rec: x1 HIV-V table")) return 0;
+        cm_hiv_hooked = 1;
+    }
+    if (cm_hiv_rows != rows) cm_hiv_ready_rows = 0;
+    cm_hiv_rows = rows;
+    return 1;
+}
+
+/* cm_live task: make the copy as soon as the hook has seen Canon's table; then every ~1 s
+ * re-check it against Canon's (verified static on camera, changed = 0 over 60 s). */
+static void cm_hiv_poll(void)
+{
+    if (!cm_hiv_rows || !lv || lv_paused || !cm_1x3_active) return;
+    uint32_t rows = cm_hiv_rows;
+    uint32_t src = cm_hiv_src;
+    if (!src) return;
+    uint32_t su = src | 0x40000000u;
+    if (cm_hiv_ready_src != src || cm_hiv_ready_rows != rows)
+    {
+        cm_hiv_ready_rows = 0;                     /* hook keeps Canon's table while we copy */
+        for (uint32_t r = 0; r < rows; r++)
+            for (uint32_t w = 0; w < HIV_ROW_BYTES; w += 4u)
+                cm_hiv_put(r * HIV_ROW_BYTES + w, MEM(su + cm_hiv_src_row(r) * HIV_ROW_BYTES + w));
+        cm_hiv_ready_src = src;
+        cm_hiv_ready_rows = rows;
+        cm_hiv_t_poll = get_ms_clock();
+        return;
+    }
+    int t = get_ms_clock();
+    if (t - cm_hiv_t_poll < 1000) return;
+    cm_hiv_t_poll = t;
+    uint32_t du = cm_hiv_base() | 0x40000000u;
+    for (uint32_t r = 0; r < rows; r++)
+        for (uint32_t w = 0; w < HIV_ROW_BYTES; w += 4u)
+        {
+            uint32_t v = MEM(su + cm_hiv_src_row(r) * HIV_ROW_BYTES + w);
+            if (MEM(du + r * HIV_ROW_BYTES + w) != v)
+                cm_hiv_put(r * HIV_ROW_BYTES + w, v);
+        }
+}
+
+
 static void cm_apply_hfps_vscale(int enable)
 {
     uint32_t out_h = enable ? 61u : 101u;
@@ -4415,6 +4535,8 @@ static void cm_x1_tall_unpatch(void)
 {
     x1_fp_active = 0;
     x1_l1_active = 0;
+    cm_x1_prepro_yd = 0;
+    cm_hiv_arm(0);
     if (x1_hiv_patched) { MEM(X1_HIV_YB_ADDR) = 0x525u; x1_hiv_patched = 0; }
     if (x1_sslt_patched[1]) { unpatch_memory(X1_SSLT_A11_ADDR); x1_sslt_patched[1] = 0; x1_sslt_val[1] = 0; }
     if (x1_sslt_patched[0]) { unpatch_memory(X1_SSLT_A3_ADDR); x1_sslt_patched[0] = 0; x1_sslt_val[0] = 0; }
@@ -4467,7 +4589,14 @@ static int cm_x1_tall_patch(void)
     cm_get_tall_params(cm_live_mode, &yd, 0, 0, 0, 0, 0);
     if (yd <= 0) return 0;
     uint32_t prepro_yd = (yd > 662) ? 662u : (uint32_t)yd;
-    uint32_t raw_v = 0x528u + prepro_yd - 30u; /* keep SSLT & HIV ch 0x18 darkframe buffer within 1949 lines */
+    /* SSLT, prepro regs and HIV ch 0x18 must all see the same height (1950 lines, mode 13: 2070). */
+    int yb_ok = x1_hiv_patched || MEM(X1_HIV_YB_ADDR) == 0x525u; /* same condition as the HIV yb write below */
+    if ((uint32_t)yd > prepro_yd && yb_ok)
+        prepro_yd = (uint32_t)yd;    /* KI-3: Canon's HIV table area is valid for 2070 lines */
+    /* KI-4: our copy of the HIV table without Canon's bad entry 1318 (falls back to Canon's table) */
+    cm_hiv_arm(yb_ok ? 0x525u + prepro_yd - 30u + 1u : 0u);
+    cm_x1_prepro_yd = prepro_yd;
+    uint32_t raw_v = 0x528u + prepro_yd - 30u; /* SSLT input = prepro output = HIV ch 0x18 lines (1950 / 2070) */
     uint32_t ss_h  = (raw_v - 48u) & ~31u;
     if (ss_h > 1888u) ss_h = 1888u;
     uint32_t new_a3  = raw_v - ss_h;
@@ -4647,6 +4776,72 @@ static void cm_apply_x1_vscale(int anam)
 /* Unpatch all hooks, ROM patches, and Eeko RAM tables without writing live sensor registers.
  * When LiveView is active, callers use cm_live_disarm() which pauses LV around this function
  * so SSLT and Eeko never see mismatched tables mid-frame. */
+/* KI-1 / KI-2 (2026-11-27): x5 1:1 pan. Canon's LVx5_StartPreproPath (1.1.3 0xFF48A330, 1.2.3 0xFF494248)
+ * loads the zoom box position X = LDRH [R4,#0x2C], Y = LDRH [R4,#0x2E] and calls SSLT_SetWinOffset
+ * (1.1.3 0xFF33E6C0, 1.2.3 0xFF345010; r0 = table, r1 = X, r2 = Y). When X/Y change, SetWinOffset re-runs
+ * the SSLT parser, which writes C0F383D4/DC = (Y << 16 | X >> 2, (Y + 1288) << 16 | (X + 1948) >> 2)
+ * (type 7 margins A_8 = A_10 = 0). Canon's box logic is for its own 1196x792 window, so with our
+ * 1948x1288 SSLT the window lands outside the raw; cm_live_task used to rewrite it <= 10 ms later, not
+ * synced to the frame (race: pink/frozen LV, compress ASSERT, Canon VramStage.c:891 crash).
+ * Fix: hook the instruction between the LDRHs and the BL and give SetWinOffset our X/Y, so Canon
+ * writes our window itself, at its own time. Mapping (same as the old cm_live_task code): our
+ * x0 = (Canon X - 376) & ~7 (376 = (1948 - 1196) / 2, keeps Canon's box centre), clamped, y0 = S4_Y;
+ * locked presets (7..9) always S4_X. Before the first pan the window stays at S4_X. */
+#define X5_PAN_HOOK      (cm_fw->x5_pan_hook)
+#define X5_PAN_INSN      0xE5940050u   /* LDR R0, [R4, #0x50] (same in 1.1.3 and 1.2.3) */
+static int cm_pan_hooked = 0;
+static volatile int cm_pan_on = 0;          /* hook may change X/Y */
+static volatile int cm_pan_cx = -1;         /* Canon X seen last (-1 = none since arm) */
+static volatile uint32_t cm_pan_x0 = S4_X;  /* our window X */
+static volatile uint32_t cm_pan_calls = 0;
+
+static void cm_pan_hook(uint32_t * regs, uint32_t * stack, uint32_t pc)
+{
+    int m = cm_live_armed;
+    if (!cm_pan_on || !e3_active || !cm_mode_is_x5(m)) return;
+    int cx = (int)(regs[1] & 0xFFFFu);
+    uint32_t x0 = cm_pan_x0;
+    if (m <= 3)
+    {
+        if (cm_pan_cx >= 0 && cx != cm_pan_cx)
+        {
+            int x = (cx - 376) & ~7;
+            if (x < 152) x = 152;
+            if (x > S4_X_MAX) x = S4_X_MAX;
+            x0 = (uint32_t)x;
+        }
+    }
+    else
+        x0 = S4_X;
+    cm_pan_cx = cx;
+    cm_pan_x0 = x0;
+    regs[1] = x0;
+    regs[2] = S4_Y;
+    cm_pan_calls++;
+}
+
+static void cm_pan_unhook(void)
+{
+    cm_pan_on = 0;
+    if (cm_pan_hooked) { unpatch_memory(X5_PAN_HOOK); cm_pan_hooked = 0; }
+}
+
+/* 1 = hook installed; 0 = not (cm_live_task then keeps the old rewrite) */
+static int cm_pan_hook_arm(void)
+{
+    cm_pan_on = 0;
+    cm_pan_cx = -1;
+    cm_pan_x0 = S4_X;
+    if (!cm_pan_hooked)
+    {
+        if (MEM(X5_PAN_HOOK) != X5_PAN_INSN) return 0;
+        if (patch_hook_function(X5_PAN_HOOK, X5_PAN_INSN, cm_pan_hook, "crop_rec: x5 pan window")) return 0;
+        cm_pan_hooked = 1;
+    }
+    cm_pan_on = 1;
+    return 1;
+}
+
 static void cm_live_unpatch_all(int restore_sensor_direct)
 {
     int was_x1_anam = cm_mode_is_x1_anam(cm_live_armed);
@@ -4673,6 +4868,7 @@ static void cm_live_unpatch_all(int restore_sensor_direct)
         if (restore_sensor_direct && lv && is_movie_mode() && MEM(LV_STATE_ADDR + 0x08) == 1)
             cm_restore_stock_x1_sensor();
     }
+    cm_pan_unhook();
     e3_active = 0;
     e1_active = 0;
     e1_guard = 0;
@@ -4836,12 +5032,15 @@ static int cm_live_arm(int mode)
     e3_active = 1;
     cm_live_err = 0;
     cm_live_armed = mode;
+    cm_pan_hook_arm();
     return 1;
 }
 
 static void cm_live_task(void * unused)
 {
     uint32_t cur_win_s = S4_WIN_S, cur_win_e = S4_WIN_E;
+    uint32_t pan_seen = 0;
+    int pan_stale = 1000;
     uint32_t prev_raw = 0;
     int target_zoom_done = 0;
     int was_lv = 0;
@@ -4853,6 +5052,7 @@ static void cm_live_task(void * unused)
     while (1)
     {
         cm_sync_shared_mode();
+        cm_hiv_poll();
         if (running)
         {
             msleep(50);
@@ -5079,12 +5279,31 @@ static void cm_live_task(void * unused)
         if (lv && cm_mode_is_x5(cm_live_armed) && raw == RAW_5D3_X5 &&
             lv_dispsize == 5 && (MEM(LV_STATE_ADDR + 0x10) >> 16) != 10)
         {
+            uint32_t ws = shamem_read(REG_WIN_START), we = shamem_read(REG_WIN_END);
+            /* pan hook live (called within the last ~200 ms): Canon writes our window itself, in
+             * frame. Only a window outside the raw (another Canon writer) is still rewritten here. */
+            uint32_t pc = cm_pan_calls;
+            if (pc != pan_seen) { pan_seen = pc; pan_stale = 0; }
+            else if (pan_stale < 1000) pan_stale++;
+            if (cm_pan_on && pan_stale < 20)
+            {
+                uint32_t x0 = cm_pan_x0;
+                cur_win_s = ((uint32_t)S4_Y << 16) | (x0 >> 2);
+                cur_win_e = ((uint32_t)(S4_Y + S4_H) << 16) | ((x0 + S4_W) >> 2);
+                if (!s4_win_ok(ws, we))
+                {
+                    EngDrvOutLV(REG_WIN_START, cur_win_s);
+                    EngDrvOutLV(REG_WIN_END, cur_win_e);
+                    cm_live_wins++;
+                }
+                msleep(10);
+                continue;
+            }
             if (cm_live_armed >= 7 && cm_live_armed <= 9)
             {
                 cur_win_s = S4_WIN_S;
                 cur_win_e = S4_WIN_E;
             }
-            uint32_t ws = shamem_read(REG_WIN_START), we = shamem_read(REG_WIN_END);
             if (ws != cur_win_s || we != cur_win_e)
             {
                 if (cm_live_armed <= 3 && ((we & 0xFFFF) - (ws & 0xFFFF)) == (S4_W >> 2) && (ws >> 16) >= 140)

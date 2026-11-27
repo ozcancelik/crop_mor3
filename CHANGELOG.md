@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.0
+- **Smaller lossless files (experimental):** new `mlv_lite` option **Movie → RAW video → LJ92 Huffman: Canon / Optimized** (default Canon). With Optimized, lossless 8–12-bit clips use a Huffman table made for their bit depth instead of Canon's 14-bit table. Tested on 5D3 1.1.3 and 1.2.3: about −15 to −25% at 12-bit and −30 to −45% at 10/11-bit (larger gains at low ISO). 14-bit stays on Canon's table. Canon's table is put back after every recording, so CR2 photos are not affected. The module only switches tables when the camera's table passes a CRC32 check; Canon's table is not stored in the source.
+- **1x3 line at row 1288 fixed (all tall modes):** in 8–12-bit lossless, a dark line could appear on the left half of row 1288. The module now uses a fixed copy of Canon's HIV correction table for the full frame height.
+- **5.4K (2040p) 8–12-bit fixed:** prepro/HIV height now matches the 2070-line raw frame. Fixes the 12 Hz flicker, frozen frames and garbage bottom lines in 12-bit (and the `ASSERT` on stop). The LiveView preview sits ~120 raw lines lower in this mode.
+- **1:1 crop joystick pan:** the pan window is now set inside Canon's LiveView path, every frame, instead of being corrected afterwards. Fixes pink/frozen LiveView and `Compression error` when recording after panning.
+- **RAW video on by default:** a fresh install now starts with both Crop Mor3 (`1:1 crop 1280p`) and RAW video enabled. Existing settings are kept.
+- **`mlv_play` bit depth:** clip info, the bottom line and new thumbnails show the real bit depth (10/12/14) instead of always 14-bit. 10/12-bit clips use the full tone table (less banding). Old `.THM` thumbnails may still show the old value. Also in the EOS-M drop-in.
+
 ## v0.3.1
 - **`mlv_play` colours:** the superpixel renderer now uses the same YUV matrix as the camera's core (BT.709 on the 5D Mark III, BT.601 on EOS-M), so colours match the stock `color` preview. The tone table is now 11-bit (2048 levels): smoother shadows, less banding.
 - **`mlv_play` speed:**
